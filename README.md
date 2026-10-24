@@ -6,9 +6,10 @@ NVIDIA AI 기반 이커머스 데이터 분석 에이전트입니다. 실제 Oli
 
 - 2026-10-23: Phase 0 설계 사용자 승인 완료.
 - 2026-10-24: Phase 1 정적 역분석 재검토 완료. Vanna 실행 시연은 미검증입니다.
-- Phase 2: 원본 CSV 9개 적재·키·결측·기간·연결 중복 조사와 오프라인 테스트 완료. 결과 검토와 KPI 정의 승인 대기입니다.
-- 실행 가능한 코드는 환경 확인·DB 구축·데이터 프로파일링입니다. 분석 앱·KPI 계산·API 연결은 이후 단계에서 구현합니다.
-- 초기 문서·환경은 `main`, Phase 2 변경은 `codex/phase-2-data-foundation` 브랜치와 PR에서 검토합니다.
+- Phase 2: 원본 CSV 9개 적재·데이터 조사와 KPI 기준 승인 반영 완료.
+- Phase 3: 승인된 기준 SQL 4개·수작업 기대값 테스트·실제 CSV 독립 대조 완료, 결과 검토 대기입니다.
+- 실행 가능한 코드는 환경 확인·DB 구축·데이터 프로파일링·기준 KPI 분석입니다. 자연어 분석 앱과 API 연결은 이후 단계입니다.
+- 초기 환경은 `main`, Phase 2·3은 각각 `codex/` 브랜치·검토 PR에 게시합니다. Phase 3 PR의 비교 기준은 Phase 2 브랜치입니다.
 
 ## MVP
 
@@ -51,7 +52,8 @@ flowchart TD
 - [Vanna 역분석](docs/REVERSE_ENGINEERING.md)
 - [데이터 출처·적재 정책·해석](docs/DATA_SOURCE.md)
 - [실측 데이터 품질 보고서](docs/DATA_PROFILE.md)
-- [KPI 정의 초안·승인 사항](docs/METRICS.md)
+- [승인된 KPI 정의](docs/METRICS.md)
+- [기준 SQL 실제 결과·독립 검증](docs/BASELINE_RESULTS.md)
 - [학습 기록](docs/LEARNING_LOG.md)
 - [검증 근거](docs/TEST_EVIDENCE.md)
 
@@ -85,7 +87,7 @@ uv pip compile requirements.in --python .venv/Scripts/python.exe --default-index
 
 Python 3.11과 Windows x64에서 확인한 구성입니다. 다른 운영체제·Python 버전의 호환성은 아직 검증하지 않았습니다. uv 사용법은 [가상환경](https://docs.astral.sh/uv/pip/environments/)과 [의존성 고정·동기화 공식 문서](https://docs.astral.sh/uv/pip/compile/)를 참고합니다.
 
-환경 확인 외에 데이터 적재·품질 테스트 11개를 제공합니다. API 키와 Olist 원본 없이 작은 합성 CSV로 실행합니다.
+데이터 적재 11개·지표 23개, 총 34개 테스트를 제공합니다. API 키와 Olist 원본 없이 작은 합성 입력으로 실행합니다.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
@@ -106,7 +108,23 @@ Python 3.11과 Windows x64에서 확인한 구성입니다. 다른 운영체제�
 - 파일 SHA-256과 적재 전후 행 수를 비교하고, 변환 실패·금액 정밀도 손실은 중단합니다.
 - 조사 명령은 DB를 읽기 전용으로 열고 로컬 JSON과 집계 Markdown 보고서를 생성합니다.
 - 기본 결과: 주문 99,441행, 구매 시각 2016-09-04~2018-10-17, 세 자식 테이블 LEFT JOIN 119,143행.
-- KPI별 주문 상태·날짜·중복 처리 기준은 [정의 초안](docs/METRICS.md) 승인 후 구현합니다.
+- KPI별 주문 상태·날짜·중복 처리 기준은 [승인 정의](docs/METRICS.md)를 따릅니다.
+
+## AI 없는 기준 분석
+
+이 PC에서 실제 원본과 DB를 읽기 전용으로 조회하고 원본 CSV의 독립 계산과 대조하려면 다음을 실행합니다.
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -m scripts.run_baselines --start 2016-09-01 --end 2018-11-01
+```
+
+기간은 시작 포함·종료 제외입니다. 결과는 로컬 `data/processed/baseline_results.json`과 집계 문서 [BASELINE_RESULTS](docs/BASELINE_RESULTS.md)에 기록합니다. 전체 카테고리 합계 대조도 수행하되 표시 순위는 TOP 5입니다.
+
+- 실제 기본 기간: 배송 완료 주문 96,478건, 상품금액 13,221,498.11(원본 단위·배송비 제외).
+- 배송 비교 가능 96,470건 중 날짜 단위 지연 6,534건. 배송일 결측 8건은 분모에서 제외합니다.
+- 알려진 금액과 주문수·카테고리·배송·대표 리뷰가 원본 CSV의 Decimal 계산과 일치해야 보고서를 생성합니다.
+- 관측된 0원은 유지하고, 기간·상태에 맞는 데이터 부재와 금액 결측은 0으로 바꾸지 않습니다.
+- 기준 SQL 실행기는 검토된 저장소 파일만 사용합니다. AI 생성 SQL의 안전성 검증은 Phase 5의 별도 작업입니다.
 
 ## GitHub 활용
 
