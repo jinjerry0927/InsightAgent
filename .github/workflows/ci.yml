@@ -1,0 +1,37 @@
+name: Python checks
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version-file: .python-version
+      - name: Install the verified uv version
+        run: python -m pip install uv==0.10.6
+      - name: Create the isolated environment
+        run: uv venv .venv --python python --no-python-downloads
+      - name: Install locked dependencies
+        run: uv pip sync requirements.txt --python .venv/Scripts/python.exe --default-index https://pypi.org/simple --require-hashes --only-binary :all:
+      - name: Check dependencies
+        run: uv pip check --python .venv/Scripts/python.exe
+      - name: Check native data integration
+        run: .\.venv\Scripts\python.exe scripts/check_environment.py
+      - name: Run offline data tests
+        run: .\.venv\Scripts\python.exe -m pytest -q
+      - name: Compile Python sources
+        run: .\.venv\Scripts\python.exe -m compileall -q scripts tests

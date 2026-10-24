@@ -6,8 +6,9 @@ NVIDIA AI 기반 이커머스 데이터 분석 에이전트입니다. 실제 Oli
 
 - 2026-10-23: Phase 0 설계 사용자 승인 완료.
 - 2026-10-24: Phase 1 정적 역분석 재검토 완료. Vanna 실행 시연은 미검증입니다.
-- Phase 2: 가상환경·의존성 설치·환경 동작 확인 완료. Olist 원본 다운로드와 데이터 구축은 대기 중입니다.
-- 현재 실행할 수 있는 코드는 환경 확인 스크립트입니다. 분석 앱·KPI·API 연결은 이후 단계에서 구현합니다.
+- Phase 2: 원본 CSV 9개 적재·키·결측·기간·연결 중복 조사와 오프라인 테스트 완료. 결과 검토와 KPI 정의 승인 대기입니다.
+- 실행 가능한 코드는 환경 확인·DB 구축·데이터 프로파일링입니다. 분석 앱·KPI 계산·API 연결은 이후 단계에서 구현합니다.
+- 초기 문서·환경은 `main`, Phase 2 변경은 `codex/phase-2-data-foundation` 브랜치와 PR에서 검토합니다.
 
 ## MVP
 
@@ -48,6 +49,9 @@ flowchart TD
 - [프로젝트 계획과 현재 상태](docs/PROJECT_PLAN.md)
 - [기술 의사결정](docs/DECISIONS.md)
 - [Vanna 역분석](docs/REVERSE_ENGINEERING.md)
+- [데이터 출처·적재 정책·해석](docs/DATA_SOURCE.md)
+- [실측 데이터 품질 보고서](docs/DATA_PROFILE.md)
+- [KPI 정의 초안·승인 사항](docs/METRICS.md)
 - [학습 기록](docs/LEARNING_LOG.md)
 - [검증 근거](docs/TEST_EVIDENCE.md)
 
@@ -81,7 +85,39 @@ uv pip compile requirements.in --python .venv/Scripts/python.exe --default-index
 
 Python 3.11과 Windows x64에서 확인한 구성입니다. 다른 운영체제·Python 버전의 호환성은 아직 검증하지 않았습니다. uv 사용법은 [가상환경](https://docs.astral.sh/uv/pip/environments/)과 [의존성 고정·동기화 공식 문서](https://docs.astral.sh/uv/pip/compile/)를 참고합니다.
 
-아직 앱 테스트는 없습니다. `python -m pytest --version`은 pytest 설치 확인이며 테스트 통과 결과가 아닙니다.
+환경 확인 외에 데이터 적재·품질 테스트 11개를 제공합니다. API 키와 Olist 원본 없이 작은 합성 CSV로 실행합니다.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+## 로컬 데이터 구축·조사
+
+현재 원본은 `data/raw/archive/`에 있으며, 명령은 `data/raw/` 또는 그 바로 아래의 완전한 CSV 폴더 1개를 자동 확인합니다. 파일을 옮길 필요가 없습니다.
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.build_database --source-dir data/raw --output data/processed/insightagent.duckdb
+.\.venv\Scripts\python.exe -m scripts.profile_data
+```
+
+이 PC에는 DB가 이미 생성되어 있습니다. 구축 명령은 기존 DB를 덮어쓰지 않으므로 재실행하려면 `--output data/processed/insightagent-rebuild.duckdb`처럼 새 파일을 지정합니다. 새 DB 조사 시에는 `profile_data --database data/processed/insightagent-rebuild.duckdb`를 사용합니다.
+
+- 원본 수정·중복 제거·결측 보정 없이 9개 테이블을 적재합니다.
+- 파일 SHA-256과 적재 전후 행 수를 비교하고, 변환 실패·금액 정밀도 손실은 중단합니다.
+- 조사 명령은 DB를 읽기 전용으로 열고 로컬 JSON과 집계 Markdown 보고서를 생성합니다.
+- 기본 결과: 주문 99,441행, 구매 시각 2016-09-04~2018-10-17, 세 자식 테이블 LEFT JOIN 119,143행.
+- KPI별 주문 상태·날짜·중복 처리 기준은 [정의 초안](docs/METRICS.md) 승인 후 구현합니다.
+
+## GitHub 활용
+
+| 기능 | 사용 방법 |
+| --- | --- |
+| Commits | 승인된 변경·검증의 이력 확인 |
+| [Issues](https://github.com/jinjerry0927/InsightAgent/issues) | 오류 보고 양식과 검토·다음 단계 작업 추적 |
+| [Pull requests](https://github.com/jinjerry0927/InsightAgent/pulls) | `codex/` 브랜치 변경·테스트·제약 검토 후 병합 판단 |
+| [Actions](https://github.com/jinjerry0927/InsightAgent/actions) | push·PR마다 의존성·환경 연결·합성 pytest·컴파일 자동 확인 |
+
+자동 검증은 Windows/Python 3.11에서 원본 데이터와 API 키 없이 실행합니다. 자동 병합·배포는 설정하지 않았습니다. 실제 Olist 적재 검증은 로컬 집계 보고서와 원본 지문을 별도 근거로 사용합니다.
 
 ## Olist 수동 다운로드
 
@@ -94,12 +130,12 @@ Python 3.11과 Windows x64에서 확인한 구성입니다. 다른 운영체제�
 Get-ChildItem .\data\raw -Filter *.csv | Select-Object Name
 ```
 
-`data/raw/`와 `data/processed/` 폴더는 준비되어 있습니다. 웹사이트에 표시되는 kagglehub 코드는 수동 다운로드에 필요하지 않습니다. 2026-10-24 사용자 확인 기준으로 원본은 아직 미다운로드 상태이며 실제 기간·행 수·품질·KPI는 조사하지 않았습니다.
+이 프로젝트의 현재 원본은 다운로드·압축 해제까지 완료된 상태입니다. 위 절차는 새 체크아웃의 재현을 위한 안내입니다. 웹사이트의 kagglehub 코드는 수동 다운로드에 필요하지 않습니다.
 
 ## 데이터·보안
 
 - 데이터 출처: [Olist Brazilian E-Commerce Public Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce).
-- 원본과 생성 DB는 로컬에서 관리합니다. 배포 데이터 버전·라이선스·재배포 조건은 Phase 2에서 확인합니다.
+- 원본과 생성 DB는 로컬에서 관리합니다. 공식 페이지의 Version 2·CC BY-NC-SA 4.0 표시와 로컬 지문은 [출처 문서](docs/DATA_SOURCE.md)에 기록했습니다.
 - `.env`, 가상환경, 원본 데이터와 생성 DB는 Git에서 제외합니다.
 - SQL 생성과 실행을 분리하고, 조회 전용·외부 접근 차단·리소스 제한을 검증한 경로로 실행할 예정입니다.
 - 실 API 호출, Git push, 배포는 승인된 범위에서만 진행합니다.

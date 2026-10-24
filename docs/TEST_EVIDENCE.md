@@ -4,6 +4,53 @@
 
 실행한 검증과 정적 코드 조사, 예정 검증을 구분한다. 실행하지 않은 테스트·API·화면을 성공으로 기록하지 않는다. 출력에는 비밀값을 포함하지 않는다.
 
+## 2026-10-24 — 실제 데이터 구축·GitHub 게시
+
+사용자가 파일 준비 완료와 GitHub 업로드·활용을 요청했다. 초기 문서·환경 12개 파일을 main의 `482f7dc` 커밋으로 게시했고, 데이터 구축은 `codex/phase-2-data-foundation`에서 수행했다. 아래 환경 설정 기록은 당시 시점으로 보존한다.
+
+### 실제 명령과 결과
+
+| 실행 명령·수단 | 실제 결과 |
+| --- | --- |
+| GitHub get_repo·branches 조회 | 공개 저장소·쓰기 권한 확인, 초기 branches는 빈 목록 |
+| `uv pip check --python .venv/Scripts/python.exe` | 설치된 12개 패키지 의존성 일관성 확인, 종료 코드 0 |
+| `.\.venv\Scripts\python.exe scripts/check_environment.py` | 환경 연결·타입 검증 PASS, 종료 코드 0 |
+| 게시 대상 12개 파일 비밀값 패턴 검사 | 실제 키 형태·개인 키 헤더 발견 0. 모든 형태의 비밀값 부재를 보장하는 검사는 아님 |
+| `git diff --cached --check` | 공백 오류 없음 |
+| `git commit -m "docs: initialize InsightAgent design and verified Python environment"` | 초기 커밋 482f7dc 생성 |
+| `git -c credential.interactive=false push -u origin main` | main 게시·추적 브랜치 설정 성공 |
+| `git switch -c codex/phase-2-data-foundation` | Phase 2 작업 브랜치 생성 |
+| `.\.venv\Scripts\python.exe -m pytest -q --tb=short` | 최종 11 passed, 종료 코드 0 |
+| `.\.venv\Scripts\python.exe -m scripts.build_database --source-dir data/raw --output data/processed/insightagent.duckdb` | CSV 9개 적재·원본 지문·타입·행 수 검사 성공, 종료 코드 0 |
+| `.\.venv\Scripts\python.exe -m scripts.profile_data` | 9개 테이블의 로컬 JSON·집계 Markdown 생성, 종료 코드 0 |
+| `.\.venv\Scripts\python.exe -m compileall -q scripts tests` | 컴파일 성공, 종료 코드 0 |
+| Kaggle 공개 페이지 브라우저 조회 | Version 2·CSV 9개·CC BY-NC-SA 4.0 표시 확인. 로컬과 공식 배포 체크섬 비교는 아님 |
+| GitHub Actions 공식 태그 조회 | checkout v5·setup-python v6의 실제 커밋 확인 후 workflow에 SHA 고정 |
+
+### 테스트 범위와 수정 기록
+
+- 합성 CSV의 한글·우편번호 앞자리 0·Decimal·날짜·NULL 보존과 원본 SHA-256 유지.
+- 잘못된 날짜·금액·소수 2자리 초과·정수 소수부 손실 시 중단과 임시 DB 정리.
+- 기존 출력 보존, 누락 파일·잘못된 헤더·입력 폴더 모호성 거부.
+- 반복 고객 ID·중복 리뷰를 삭제하지 않고 보고, 연결되지 않는 키 노출.
+- 상품 2행·결제 2행·리뷰 2행의 단순 연결이 8행임을 기대값으로 검증.
+- 첫 실행은 7 failed·4 passed였다. DuckDB 2.0 Relation의 fetchone 제거, 미완료 결과와 다음 관계 작업 충돌을 확인했다.
+- 최소 재현에서 Python read_csv 관계는 0행인데 SQL read_csv는 같은 합성 CSV를 1행으로 읽는 차이를 확인했다. 소스가 같은지 확인하고 SQL 스테이징 경로로 일원화했다.
+- 수정 3회 이내에 해결했고 최종 11개 테스트가 통과했다. 실제 원본 적재는 테스트 통과 후 실행했다.
+- 리뷰 언어 표본 조회의 최초 출력은 Windows cp949 인코딩 오류로 중단됐다. `python -X utf8 -`로 재조회해 짧은 본문 5개가 포르투갈어임을 확인했다. 원본 데이터 변경은 없었다.
+
+### 실제 데이터 근거
+
+- 고객·주문 각 99,441행, 지리정보 1,000,163행, 상품 행 112,650행, 결제 103,886행, 리뷰 99,224행, 상품 32,951행, 판매자 3,095행, 번역 71행.
+- 전체 컬럼 타입·NULL·고유값·날짜 범위·키 후보·연결 오류·월별 분포는 [DATA_PROFILE](DATA_PROFILE.md)에 생성했다.
+- 단순 LEFT JOIN 예상 행 수 119,143과 실제 JOIN COUNT(*)가 일치했다.
+- 원본 지문·적재 전후 행 수를 대조하고 원본·DB를 Git 제외 대상으로 유지했다.
+- KPI 정의는 [METRICS](METRICS.md)의 승인 대기 초안이며 금액 KPI·배송 지연율을 실행하지 않았다.
+
+### GitHub 검증 범위
+
+Actions는 원본·API 키 없이 Windows/Python 3.11에서 의존성 검사·환경 연결·합성 pytest·컴파일을 수행하도록 구성했다. 여기의 11 passed는 로컬 실행 기록이다. 원격 실행 결과·커밋·로그는 해당 PR의 Checks와 Actions 실행 이력을 근거로 확인한다. 오류 보고와 PR 양식도 추가했다. 자동 병합·배포는 설정하지 않았다.
+
 ## 2026-10-24 — Phase 1 재검토·Phase 2 환경 설정
 
 사용자가 Phase 1 재검토 후 Phase 2 환경 설정 시작을 요청했다. 기존 원격·문서를 유지하면서 `.python-version`, `requirements.in`, `requirements.txt`, `scripts/check_environment.py`와 로컬 `.venv`를 추가했다. 아래 2026-10-23 기록은 당시 상태로 보존한다.
@@ -120,4 +167,4 @@ git check-ignore --no-index -v .env .venv/probe data/raw/probe.csv data/processe
 
 ## 다음 실행 검증
 
-원본 데이터 확보와 데이터 구축 코드 작성 후 `.\.venv\Scripts\python.exe -m pytest tests/test_data_loading.py -q`와 실제 원본·적재 DB 비교를 수행할 계획이다. 현재는 대상 테스트 파일이 없으므로 실행 결과가 없다.
+데이터 구축 테스트는 현재 11개가 실행·통과했다. 다음 실행 검증은 KPI 정의·Phase 3 착수 승인 후의 기준 SQL 기대값 비교다. NVIDIA 실 API는 Phase 4의 별도 범위다.
