@@ -7,9 +7,10 @@ NVIDIA AI 기반 이커머스 데이터 분석 에이전트입니다. 실제 Oli
 - 2026-10-23: Phase 0 설계 사용자 승인 완료.
 - 2026-10-24: Phase 1 정적 역분석 재검토 완료. Vanna 실행 시연은 미검증입니다.
 - Phase 2: 원본 CSV 9개 적재·데이터 조사와 KPI 기준 승인 반영 완료.
-- Phase 3: 승인된 기준 SQL 4개·수작업 기대값 테스트·실제 CSV 독립 대조 완료, 결과 검토 대기입니다.
-- 실행 가능한 코드는 환경 확인·DB 구축·데이터 프로파일링·기준 KPI 분석입니다. 자연어 분석 앱과 API 연결은 이후 단계입니다.
-- 초기 환경은 `main`, Phase 2·3은 각각 `codex/` 브랜치·검토 PR에 게시합니다. Phase 3 PR의 비교 기준은 Phase 2 브랜치입니다.
+- Phase 3: 기준 SQL 4개·실제 CSV 독립 대조 완료, 사용자 검토 및 다음 단계 승인 반영했습니다.
+- Phase 4: NVIDIA API 어댑터·오프라인 검증 완료. API 키 설정과 실제 1회 연결 시험은 대기 중입니다.
+- 실행 가능한 코드는 환경 확인·DB 구축·프로파일링·기준 KPI 분석·API 연결 점검입니다. 자연어 분석 앱은 이후 단계입니다.
+- 초기 환경은 `main`, 이후 Phase는 `codex/` 브랜치·검토 PR에 게시합니다. Phase 4 PR은 Phase 3 브랜치를 기준으로 검토하며 자동 병합하지 않습니다.
 
 ## MVP
 
@@ -54,12 +55,13 @@ flowchart TD
 - [실측 데이터 품질 보고서](docs/DATA_PROFILE.md)
 - [승인된 KPI 정의](docs/METRICS.md)
 - [기준 SQL 실제 결과·독립 검증](docs/BASELINE_RESULTS.md)
+- [NVIDIA API 설정·호출 예산·오류 처리](docs/NVIDIA_API.md)
 - [학습 기록](docs/LEARNING_LOG.md)
 - [검증 근거](docs/TEST_EVIDENCE.md)
 
 ## 환경 설정과 직접 확인
 
-검증 환경은 Windows x64, Python 3.11.0, uv 0.10.6입니다. 직접 의존성은 DuckDB 2.0.0, pandas 3.1.0, pytest 9.1.1이며 하위 의존성까지 `requirements.txt`에 버전·배포 파일 해시를 고정했습니다.
+검증 환경은 Windows x64, Python 3.11.0, uv 0.10.6입니다. 직접 의존성은 DuckDB 2.0.0, pandas 3.1.0, pytest 9.1.1, openai 3.37.0, python-dotenv 1.2.4이며 하위 의존성까지 `requirements.txt`에 버전·배포 파일 해시를 고정했습니다.
 
 현재 PC의 `.venv`는 이미 준비되어 있습니다. PowerShell에서 프로젝트 폴더로 이동한 뒤 실행합니다. 가상환경 활성화나 PowerShell 실행 정책 변경은 필요하지 않습니다.
 
@@ -87,7 +89,7 @@ uv pip compile requirements.in --python .venv/Scripts/python.exe --default-index
 
 Python 3.11과 Windows x64에서 확인한 구성입니다. 다른 운영체제·Python 버전의 호환성은 아직 검증하지 않았습니다. uv 사용법은 [가상환경](https://docs.astral.sh/uv/pip/environments/)과 [의존성 고정·동기화 공식 문서](https://docs.astral.sh/uv/pip/compile/)를 참고합니다.
 
-데이터 적재 11개·지표 23개, 총 34개 테스트를 제공합니다. API 키와 Olist 원본 없이 작은 합성 입력으로 실행합니다.
+데이터 적재 11개·지표 23개·API 모의 테스트 49개, 총 83개를 제공합니다. API 키와 Olist 원본 없이 작은 합성 입력으로 실행합니다.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q

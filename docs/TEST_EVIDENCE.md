@@ -4,6 +4,33 @@
 
 실행한 검증과 정적 코드 조사, 예정 검증을 구분한다. 실행하지 않은 테스트·API·화면을 성공으로 기록하지 않는다. 출력에는 비밀값을 포함하지 않는다.
 
+## 2026-10-24 — Phase 3 재검토·Phase 4 NVIDIA 어댑터
+
+사용자 요청으로 Phase 3 검토 승인을 반영하고 Phase 4를 구현했다. 아래 과거 기록은 각 단계의 당시 상태다.
+
+| 실제 실행 명령 | 결과 |
+| --- | --- |
+| 변경 전 `.\.venv\Scripts\python.exe -m pytest -q --tb=short` | Phase 3 전체 34개 재검증 통과, 기존 PR #3 push·PR CI 모두 SUCCESS 확인 |
+| `uv pip compile requirements.in --python .venv/Scripts/python.exe --default-index https://pypi.org/simple --generate-hashes --output-file requirements.txt --quiet` | 새 직접 의존성 openai·python-dotenv 추가 해결, 기존 12개 버전 유지 |
+| `uv pip sync requirements.txt --python .venv/Scripts/python.exe --default-index https://pypi.org/simple --require-hashes --only-binary :all:` | 15개 추가 설치·총 27개. uv 캐시 rename의 Windows 일시 접근 거부 경고 후 자체 재시도로 설치 성공, 종료 코드 0 |
+| `uv pip check --python .venv/Scripts/python.exe` | 27개 패키지 호환성 확인, 종료 코드 0 |
+| `.\.venv\Scripts\python.exe -X utf8 scripts/check_environment.py` | 기존 CSV→pandas→DuckDB→pandas·문자·Decimal·시각·NULL·CTE 검사 PASS |
+| `.\.venv\Scripts\python.exe -X utf8 -m pytest -q --tb=short` | 신규 49개·기존 34개, 전체 83개 통과, 종료 코드 0 |
+| `.\.venv\Scripts\python.exe -m compileall -q scripts tests` | 컴파일 성공, 종료 코드 0 |
+| `.\.venv\Scripts\python.exe -X utf8 -m scripts.check_nvidia` | configuration 오류: 키 미설정. attempts=0·usage=null, 애플리케이션 종료 코드 2 확인, 실제 네트워크 요청 없음 |
+
+### 검증 범위·초기 실패와 수정
+
+- 실제 SDK openai 3.37.0과 그 하위 HTTP 라이브러리 httpx2의 MockTransport를 사용했다. 외부 서버·실 키를 테스트에 사용하지 않았다.
+- 올바른 요청 주소·모델 교체·Authorization·문맥·토큰 상한·thinking 비활성화, 사용량·시간 반환, 설정 우선순위·보간 금지·입력 제한을 확인했다.
+- 400·401·403·404·408·429·500·503·307과 연결 실패·시간 초과에서 전송 1회·추가 재시도 없음. 리다이렉트도 새 요청을 만들지 않는다.
+- 빈 답변·잘못된 choices·비정상 종료·잘린 출력·잘못된 JSON·음수 사용량을 거부하며, 제공된 사용량이 없는 경우 null로 유지한다. 잘린 응답에 제공된 사용량도 보존한다.
+- 첫 신규 테스트 실행은 38개 통과·10개 실패였다. 9개는 traceback 소스 줄에 테스트의 프롬프트 리터럴 자체가 표시되어 생긴 잘못된 탐지였고 변수로 전달해 수정했다. 1개는 Python 3.11.0 traceback의 한글 다중 행 호출 위치 처리에서 UnicodeDecodeError가 발생했다. 한국어 메시지를 변수로 분리한 뒤 48개 통과, 사용량 검사 1개를 추가해 전체 83개 통과했다.
+- provider 오류 본문·키·프롬프트가 공개 예외·기본 로그·CLI 보고서에 섞이지 않는지 합성 비밀 표식으로 확인했다. 디버그 CLI는 SDK HTTP 디버그 로그도 비활성화한다.
+- 로컬 `.env`는 비밀값 없이 준비했으며 Git 제외 대상이다. 실제 키 입력·계정 이용 권한·호스팅 파라미터 수용·실제 사용량·시간은 미검증이다. 실 연결 결과 없이 Phase 4 전체 완료로 표현하지 않는다.
+- 최소 실제 시험은 고정 문장 1회·출력 최대 64토큰이다. 키가 준비되면 `--live` 결과를 기록한다. Phase 5와 실제 SQL 생성·실행 연동은 미구현이다.
+- 게시 전 변경 파일 12개의 UTF-8·마지막 줄·공백·코드 펜스·상대 문서 링크·충돌 표식·비밀값 패턴을 검사해 통과했다. `.env`와 연결 결과 JSON이 Git 제외 대상이며 `.env`가 추적되지 않는 것도 확인했다. 모든 형태의 비밀값 부재를 보장하는 검사는 아니다.
+
 ## 2026-10-24 — Phase 3 승인 KPI·기준 SQL
 
 사용자의 "Phase 3 시작하자" 요청으로 직전 KPI 기준을 승인 반영했다. Phase 2를 기반으로 `codex/phase-3-baseline-metrics` 브랜치를 만들고, SQL 4개·실행기·CSV 독립 계산·테스트·집계 보고서를 추가했다. 아래 기존 기록은 각 단계의 당시 상태다.
