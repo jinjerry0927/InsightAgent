@@ -51,6 +51,8 @@
 
 Actions는 원본·API 키 없이 Windows/Python 3.11에서 의존성 검사·환경 연결·합성 pytest·컴파일을 수행하도록 구성했다. 여기의 11 passed는 로컬 실행 기록이다. 원격 실행 결과·커밋·로그는 해당 PR의 Checks와 Actions 실행 이력을 근거로 확인한다. 오류 보고와 PR 양식도 추가했다. 자동 병합·배포는 설정하지 않았다.
 
+초기 원격 실행 40047503466은 작업 시작 전 workflow 구문 오류로 실패했다. 설치 명령 끝의 `:all:`을 YAML의 매핑 기호로 해석하는 문제를 기존 전역 PyYAML로 재현했고, `run: >-` 명령 블록으로 수정했다. 프로젝트 의존성을 추가하지 않았다. 연결된 GitHub 커넥터의 Issue 쓰기는 403이어서 이미 로그인된 GitHub CLI를 사용한다. 추가 계정 권한 부여나 토큰 변경은 하지 않았다.
+
 ## 2026-10-24 — Phase 1 재검토·Phase 2 환경 설정
 
 사용자가 Phase 1 재검토 후 Phase 2 환경 설정 시작을 요청했다. 기존 원격·문서를 유지하면서 `.python-version`, `requirements.in`, `requirements.txt`, `scripts/check_environment.py`와 로컬 `.venv`를 추가했다. 아래 2026-10-23 기록은 당시 상태로 보존한다.

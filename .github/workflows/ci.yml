@@ -26,7 +26,9 @@ jobs:
       - name: Create the isolated environment
         run: uv venv .venv --python python --no-python-downloads
       - name: Install locked dependencies
-        run: uv pip sync requirements.txt --python .venv/Scripts/python.exe --default-index https://pypi.org/simple --require-hashes --only-binary :all:
+        run: >-
+          uv pip sync requirements.txt --python .venv/Scripts/python.exe
+          --default-index https://pypi.org/simple --require-hashes --only-binary :all:
       - name: Check dependencies
         run: uv pip check --python .venv/Scripts/python.exe
       - name: Check native data integration
