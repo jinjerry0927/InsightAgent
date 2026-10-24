@@ -1,0 +1,21 @@
+# Local credentials (keep only the future example file under version control)
+.env
+.env.*
+!.env.example
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local source data and generated databases
+data/raw/
+data/processed/
+*.duckdb
+*.duckdb.wal

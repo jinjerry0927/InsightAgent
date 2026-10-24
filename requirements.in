@@ -1,0 +1,5 @@
+# Phase 2: data loading, analysis, and offline verification.
+# Compile this file to requirements.txt before syncing the virtual environment.
+duckdb
+pandas
+pytest
