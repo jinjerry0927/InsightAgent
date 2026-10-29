@@ -4,6 +4,35 @@
 
 실행한 검증과 정적 코드 조사, 예정 검증을 구분한다. 실행하지 않은 테스트·API·화면을 성공으로 기록하지 않는다. 출력에는 비밀값을 포함하지 않는다.
 
+## 2026-10-29 — Phase 4 설정 검토·최소 실제 연결
+
+사용자가 API 설정 완료를 알려 기존 Phase 4의 남은 연결 검증을 수행했다. 애플리케이션 코드·의존성 변경 없이 문서 상태와 증거만 갱신한다. 아래 이전 날짜의 키 미설정 기록은 당시 상태다.
+
+| 실제 실행 명령·점검 | 결과 |
+| --- | --- |
+| `load_settings()` 결과의 비밀값 없는 검토 | 설정 유효·키 존재·계획한 NVIDIA 주소/모델 일치. HTTP 단계별 타임아웃 30초·일반 출력 상한 1024토큰 |
+| `git check-ignore .env`; `git ls-files -- .env` | .env는 제외 대상, 추적 파일 없음. 파일 내용·키 값 출력 없음 |
+| `.\.venv\Scripts\python.exe -X utf8 -m pytest -q --tb=short` | 전체 83개 통과, 종료 코드 0 |
+| `uv pip check --python .venv/Scripts/python.exe` | 27개 패키지 호환성 확인, 종료 코드 0 |
+| `.\.venv\Scripts\python.exe -X utf8 -m scripts.check_nvidia --live` | 상태 ok·기대 답변 일치·요청 1회·자동 재시도 0회, 종료 코드 0 |
+
+실제 연결 시각은 2026-10-29 14:49:27 UTC(23:49:27 KST)다. 모델은 `nvidia/nemotron-3.5-lightning-30b-a3b`, 주소는 `https://integrate.api.nvidia.com/v1`이며 고정 연결 문장만 보냈다. 최대 출력 64토큰·비스트리밍·thinking 비활성화 설정을 유지했다.
+
+| 실제 반환 메타데이터 | 값 |
+| --- | --- |
+| 소요 시간(초) | 1.038514 |
+| prompt_tokens | 23 |
+| completion_tokens | 2 |
+| total_tokens | 25 |
+| attempts / automatic_retries | 1 / 0 |
+| status / expected_reply | ok / true |
+
+로컬 메타데이터는 `data/processed/nvidia_connection_check.json`에 기록했다. API 키·원시 응답·원시 오류는 출력·저장하지 않았으며, 원본 CSV·DB·리뷰·스키마·집계를 전송하지 않았다. 로컬 보고서와 `.env`는 Git에서 제외한다. 추가 실제 호출은 수행하지 않았다.
+
+현재 키의 모델 접근과 해당 요청의 수용·응답을 검증했다. 한국어 SQL 생성 정확도·SQL 안전성·자연어 분석 앱·계정 잔여 한도·금전 비용은 이번 시험 범위 밖이다. Phase 4 구현·검증은 완료했고 사용자 최종 검토를 기다린다. Phase 5는 착수하지 않았다.
+
+게시 전 변경 문서 6개의 UTF-8·공백·펜스·상대 링크·충돌 표식·비밀값 패턴을 검사했고, 추적 파일 37개에 로컬 API 키 문자열이 포함되지 않음을 값 출력 없이 확인했다. `.env`와 실제 연결 JSON의 Git 제외 및 `git diff --check`도 통과했다. 문서 검사와 위 애플리케이션 회귀 테스트를 구분한다.
+
 ## 2026-10-24 — Phase 3 재검토·Phase 4 NVIDIA 어댑터
 
 사용자 요청으로 Phase 3 검토 승인을 반영하고 Phase 4를 구현했다. 아래 과거 기록은 각 단계의 당시 상태다.

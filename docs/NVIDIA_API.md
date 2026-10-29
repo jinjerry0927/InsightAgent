@@ -1,6 +1,6 @@
 # NVIDIA API 연동
 
-기준일: 2026-10-24. Phase 4 코드·오프라인 검증 완료, 로컬 API 키 설정과 실제 연결 시험은 대기 중이다.
+기준일: 2026-10-29. Phase 4 코드·오프라인 검증·실제 연결 시험 완료, 사용자 최종 검토 대기다.
 
 ## 구현 범위와 공식 근거
 
@@ -8,7 +8,7 @@
 
 - [NVIDIA Build 모델 예제](https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b): OpenAI 호환 Python 클라이언트, 모델 식별자, API 기본 주소와 chat completions 호출을 확인했다.
 - [NVIDIA API Reference](https://docs.api.nvidia.com/nim/reference/nvidia-nemotron-3-5-lightning-30b-a3b): 해당 모델의 API 문서 위치를 확인했다.
-- [NVIDIA 배포 모델 카드](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16/blob/28ae02f54748b2784572c929585adff2d0d62130/README.md): `enable_thinking=False`로 직접 답변하는 예제를 확인했다. 이번 어댑터는 이 설정과 비스트리밍 호출을 사용한다. 호스팅 API에서의 수용 여부는 실제 연결 시험에서 확인해야 한다.
+- [NVIDIA 배포 모델 카드](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16/blob/28ae02f54748b2784572c929585adff2d0d62130/README.md): `enable_thinking=False`로 직접 답변하는 예제를 확인했다. 이번 어댑터는 이 설정과 비스트리밍 호출을 사용한다. 2026-10-29 실제 호스팅 API가 해당 요청을 수용하고 기대 답변을 반환했다.
 
 모델 카드의 지원 언어 목록에는 한국어가 명시되지 않았다. 실제 한국어 질문·SQL 생성 정확도는 Phase 5 평가 대상이며, 영어 연결 문장 성공으로 대신하지 않는다.
 
@@ -16,7 +16,7 @@
 
 ## 로컬 설정
 
-이 PC에는 비밀값 없는 `.env`를 준비했다. 사용자가 키만 입력한다. 새 체크아웃에서는 `.env`가 없을 때 `.env.example`을 복사한다. `.env`는 Git에서 제외되며 키를 채팅·Issue·PR에 붙이지 않는다.
+이 PC의 `.env`는 사용자가 키 설정을 완료했고 실제 호출까지 검증했다. 추가 설정은 필요 없다. 아래는 새 체크아웃·키 교체 시의 안내다. `.env`가 없을 때 `.env.example`을 복사한다. `.env`는 Git에서 제외되며 키를 채팅·Issue·PR에 붙이지 않는다.
 
 1. [모델 페이지](https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b)에서 로그인하고 **Generate API Key**로 키를 발급한다. 계정별 이용 조건·잔여 한도는 해당 화면에서 확인한다.
 2. 프로젝트 `.env`의 `NVIDIA_API_KEY=` 뒤에 키를 저장한다.
@@ -65,6 +65,7 @@
 ## 검증 상태
 
 - 설치된 실제 SDK의 HTTP 전송을 메모리 대체해 요청·응답 직렬화와 실패 처리를 검사했다. 합성 키만 사용하며 인터넷·실 API가 필요 없다.
-- Phase 4 신규 테스트 49개, 기존 적재·SQL 포함 총 83개 통과. 환경 연동·의존성 일관성·컴파일도 통과했다.
-- 실제 연결: 키 미설정으로 요청 0회, 토큰 사용량·계정 접근 권한·호스팅 파라미터 수용·실 소요 시간은 미검증이다.
+- Phase 4 신규 테스트 49개, 기존 적재·SQL 포함 총 83개 통과. 2026-10-29 전체 83개와 의존성 일관성을 다시 검증했다. 환경 연동·컴파일은 2026-10-24 통과 기록이 있다.
+- 실제 연결: 2026-10-29 23:49:27 KST, 요청 1회·재시도 0회·약 1.04초, 입력 23·출력 2·총 25토큰, 기대 답변 일치. 현재 키의 모델 접근과 요청 파라미터 수용을 확인했다.
+- 연결 상태·사용량은 로컬 `data/processed/nvidia_connection_check.json`과 [검증 기록](TEST_EVIDENCE.md)에 보관한다. 실제 키·응답 본문·로컬 JSON은 Git에 올리지 않는다. 한국어 SQL 정확도·계정 잔여 한도·금전 비용은 미검증이다.
 - 상세 명령과 초기 실패·수정은 [TEST_EVIDENCE](TEST_EVIDENCE.md)를 참조한다.
