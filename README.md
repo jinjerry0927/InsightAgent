@@ -9,9 +9,20 @@ NVIDIA AI 기반 이커머스 데이터 분석 에이전트입니다. 실제 Oli
 - Phase 2: 원본 CSV 9개 적재·데이터 조사와 KPI 기준 승인 반영 완료.
 - Phase 3: 기준 SQL 4개·실제 CSV 독립 대조 완료, 사용자 검토 및 다음 단계 승인 반영했습니다.
 - Phase 4: NVIDIA API 연동·최소 실제 연결 검증 및 사용자 다음 단계 승인 반영 완료.
-- 2026-10-30 Phase 5: 분석 에이전트·SQL 검증·별도 조회 프로세스·187개 테스트·실제 DB 4개 지표·한국어 실제 질문 1개 검증 완료, 최종 검토 대기입니다.
-- 자연어 분석은 CLI에서 실행합니다. 초기 지원 범위는 승인된 4개 KPI와 기간 변경이며 Streamlit 화면은 Phase 6입니다.
-- 초기 환경은 `main`, 이후 Phase는 `codex/` 브랜치·검토 PR에 게시합니다. Phase 5 PR은 Phase 4 브랜치를 기준으로 검토하며 자동 병합하지 않습니다.
+- Phase 5: 마지막 코드 검토·187개 회귀 테스트·실제 DB 대조를 완료하고 사용자 다음 단계 승인을 반영했습니다.
+- 2026-10-30 Phase 6: Streamlit·표·SQL·Plotly·오류·사용량 화면과 전체 219개 테스트·실제 브라우저 검증 완료, 최종 검토 대기입니다.
+- 초기 지원 범위는 승인된 4개 KPI와 기간 변경입니다. 기준 분석은 API 없이, AI 질문은 명시적 버튼 제출로 실행합니다.
+- 초기 환경은 `main`, 이후 Phase는 `codex/` 브랜치·검토 PR에 게시합니다. Phase 6 PR은 Phase 5 브랜치를 기준으로 검토하며 자동 병합하지 않습니다.
+
+## 대시보드 실행
+
+현재 PC의 실행 중인 화면은 [로컬 대시보드](http://127.0.0.1:8501)에서 열 수 있습니다. 서버가 꺼져 있으면 프로젝트 폴더에서 실행합니다.
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -m streamlit run app.py
+```
+
+**기준 분석**으로 먼저 지표·기간·SQL·그래프를 확인할 수 있습니다. **AI 질문**은 API를 사용하며 기본 1회, 수정 허용을 선택하면 최대 2회입니다. 마지막 날짜는 포함하고, 입력·탭 변경만으로 다시 호출하지 않습니다. [화면 사용·검증 범위](docs/PHASE6_DASHBOARD.md)를 참고하세요.
 
 ## MVP
 
@@ -20,7 +31,7 @@ NVIDIA AI 기반 이커머스 데이터 분석 에이전트입니다. 실제 Oli
 - 데이터 부재, 모호한 질문, 위험 SQL, API 오류에 대한 종료와 설명.
 - 고객 리뷰 검색·불만 분석은 Phase 7에서 확장합니다.
 
-## 예정 기술
+## 기술
 
 Python · DuckDB · pandas · Streamlit · Plotly · NVIDIA Build API · pytest · Git.
 
@@ -44,7 +55,7 @@ flowchart TD
     Q --> STOP
 ```
 
-데이터·KPI·API·에이전트와 제한된 조회 경로는 구현했습니다. Streamlit·Plotly 화면은 Phase 6에서 연결합니다. KPI 기준은 [METRICS](docs/METRICS.md)에 승인 상태와 함께 기록했습니다.
+데이터·KPI·API·에이전트·제한된 조회와 Streamlit/Plotly 화면을 연결했습니다. KPI 기준은 [METRICS](docs/METRICS.md)에 승인 상태와 함께 기록했습니다.
 
 ## 문서 안내
 
@@ -58,12 +69,13 @@ flowchart TD
 - [기준 SQL 실제 결과·독립 검증](docs/BASELINE_RESULTS.md)
 - [NVIDIA API 설정·호출 예산·오류 처리](docs/NVIDIA_API.md)
 - [Phase 5 에이전트·안전성·실행·검증 범위](docs/PHASE5_AGENT.md)
+- [Phase 6 대시보드 사용·표시·검증 범위](docs/PHASE6_DASHBOARD.md)
 - [학습 기록](docs/LEARNING_LOG.md)
 - [검증 근거](docs/TEST_EVIDENCE.md)
 
 ## 환경 설정과 직접 확인
 
-검증 환경은 Windows x64, Python 3.11.0, uv 0.10.6입니다. 직접 의존성은 DuckDB 2.0.0, pandas 3.1.0, pytest 9.1.1, openai 3.37.0, python-dotenv 1.2.4이며 하위 의존성까지 `requirements.txt`에 버전·배포 파일 해시를 고정했습니다.
+검증 환경은 Windows x64, Python 3.11.0, uv 0.10.6입니다. 직접 의존성은 DuckDB 2.0.0, pandas 3.1.0, pytest 9.1.1, openai 3.37.0, python-dotenv 1.2.4, Streamlit 1.66.1, Plotly 7.1.0이며 하위 의존성 포함 53개를 `requirements.txt`에 버전·배포 파일 해시로 고정했습니다.
 
 현재 PC의 `.venv`는 이미 준비되어 있습니다. PowerShell에서 프로젝트 폴더로 이동한 뒤 실행합니다. 가상환경 활성화나 PowerShell 실행 정책 변경은 필요하지 않습니다.
 
@@ -91,7 +103,7 @@ uv pip compile requirements.in --python .venv/Scripts/python.exe --default-index
 
 Python 3.11과 Windows x64에서 확인한 구성입니다. 다른 운영체제·Python 버전의 호환성은 아직 검증하지 않았습니다. uv 사용법은 [가상환경](https://docs.astral.sh/uv/pip/environments/)과 [의존성 고정·동기화 공식 문서](https://docs.astral.sh/uv/pip/compile/)를 참고합니다.
 
-데이터 적재 11개·지표 23개·API 모의 테스트 49개·에이전트/SQL/실행 제한 104개, 총 187개를 제공합니다. API 키와 Olist 원본 없이 작은 합성 입력으로 실행합니다.
+데이터 적재 11개·지표 23개·API 모의 테스트 49개·에이전트/SQL/실행 제한 104개·UI 32개, 총 219개를 제공합니다. API 키와 Olist 원본 없이 작은 합성 입력으로 실행합니다.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q

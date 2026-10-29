@@ -4,6 +4,56 @@
 
 실행한 검증과 정적 코드 조사, 예정 검증을 구분한다. 실행하지 않은 테스트·API·화면을 성공으로 기록하지 않는다. 출력에는 비밀값을 포함하지 않는다.
 
+## 2026-10-30 — Phase 5 최종 검토·Phase 6 대시보드
+
+사용자의 "마지막 검토 진행하고 Phase 6까지 진행하자" 요청으로 검토와 화면 구현을 진행했다. Phase 5 코드의 상태·예산·AST·KPI 구조·별도 조회를 다시 확인했고, 마지막 187개 테스트·기존 CI·실제 DB 4개 지표 대조에서 진행을 막는 문제를 발견하지 못했다. Phase 5 분석 엔진은 변경하지 않고 UI 서비스에서 재사용했다.
+
+| 실제 명령·점검 | 결과 |
+| --- | --- |
+| 변경 전 `.\.venv\Scripts\python.exe -X utf8 -m pytest -q --tb=short` | Phase 5 전체 187개 재검증 통과, 종료 코드 0 |
+| 변경 전 `.\.venv\Scripts\python.exe -X utf8 -m scripts.verify_agent` | 실제 DB 4개 지표·Phase 3 일치·DB 지문 유지·API 시도 0회 |
+| `uv pip compile requirements.in --constraint requirements.txt --python .venv/Scripts/python.exe --default-index https://pypi.org/simple --generate-hashes --output-file requirements.txt --quiet` | 승인 스택 Streamlit 1.66.1·Plotly 7.1.0 추가. 기존 27개 정확한 버전 유지, 총 53개 |
+| `uv pip sync requirements.txt --python .venv/Scripts/python.exe --default-index https://pypi.org/simple --require-hashes --only-binary :all:` | 26개 하위/직접 패키지 추가 설치, 종료 코드 0 |
+| `.\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_dashboard.py tests/test_charts.py tests/test_app.py -q --tb=short` | 초기 UI 31개 통과. 부분 합계 표시 검사 1개 추가 후 신규 32개 |
+| `.\.venv\Scripts\python.exe -X utf8 -m pytest -q --tb=short` | 최종 기능 검사 219개 통과(기존 187·UI 신규 32), 종료 코드 0 |
+| `.\.venv\Scripts\python.exe -X utf8 -m pytest tests/test_app.py -q --tb=short` | 표시 보완 후 AppTest 16개 재검증 통과 |
+| `.\.venv\Scripts\python.exe -m compileall -q app.py scripts tests` | 컴파일 통과, 종료 코드 0 |
+| `uv pip check --python .venv/Scripts/python.exe` | 53개 패키지 호환성 확인, 종료 코드 0 |
+| `.\.venv\Scripts\python.exe -X utf8 -m streamlit run app.py --server.port 8501` | 실제 localhost 서버에서 UI 검증. 사용 통계 비활성화·상세 예외 숨김·127.0.0.1 설정 적용 |
+
+### 의미 있는 UI 검사
+
+- 포함 마지막 날짜의 변환으로 합성 1월 31일 23:59:59 주문을 포함하고 2월 1일은 제외해 상품금액 41.00·주문 3건이 일치한다.
+- 정확한 Decimal 표시, 실제 0과 NULL, 미관측 월 gap, 같은 카테고리 번역명의 원문 코드 분리, 리뷰 표본/NULL, 월별 비율 단순 평균을 배제한 가중 지연율을 검증했다.
+- 초기 렌더링에서 분석 0회, 재실행·모드 변경 후 요청 추가 없음, 명시적 AI 제출 1회만 호출, 수정 허용 여부에 따른 예산 1/0/1 또는 2/1/2를 확인했다.
+- 데이터 부재·역전 날짜·차단/실패/확인 요청/미지원/한도 종료를 수치·차트로 꾸미지 않는다. 행 상한의 부분 결과는 전체 합계 카드 없이 표시한다. 알 수 없는 API 사용량과 원시 예외 비노출도 검사했다.
+
+### 실제 브라우저와 최소 API
+
+Playwright 스킬의 CLI 절차로 Chrome의 UI 스냅샷·클릭·날짜 입력·크기 변경·스크린샷을 확인했다. Windows에서는 스킬의 bash 래퍼와 같은 `npx.cmd --yes --package @playwright/cli playwright-cli` 명령을 사용했다. 스냅샷의 실제 ref/역할을 바탕으로 조작했으며 Playwright를 프로젝트 의존성으로 추가하지 않았다.
+
+- 기준 모드의 월별·카테고리·배송·리뷰 카드와 Plotly를 실제 DB에서 확인했다. 2024년 기간의 no_data와 역전 날짜 오류를 브라우저에서도 확인했다.
+- 1280×720 초기 검토에서 긴 상품금액이 4열 카드에서 잘렸다. 2열로 조정한 뒤 1440×1000·390×844에서 정확한 금액 전체 표시를 확인했다.
+- 직접 숨겨진 radio input을 클릭한 자동화는 포인터 가로채기 timeout을 반환했다. 표시된 라벨로 선택해 정상 동작을 확인했다. 네이티브 날짜 input의 자동 fill 중 aria-hidden/focus 경고 2개가 있었으나 해당 검증 세션의 JavaScript 오류는 0개였다. 전체 보조기술/접근성 인증을 수행한 것으로 표현하지 않는다.
+- 실제 AI 입력은 "2017년 월별 매출과 주문수를 보여줘." 1개다. 수정 허용을 끈 기본 설정에서 분석 버튼을 한 번 누르고 결과·사용량 탭을 확인했다. 이후 탭·화면 크기 변경에서 추가 분석은 요청하지 않았다.
+
+| 화면에서 확인한 실제 결과 | 값 |
+| --- | --- |
+| 선택 기간 | 2017-01-01~2017-12-31, 양끝 포함 |
+| 상태·금액·주문·상품 행 | success · 5962902.01(원본 단위) · 43428 · 49556 |
+| API 시도·SQL 수정·후보 조회 | 1 · 0 · 1 |
+| 입력·출력·총 토큰 | 1923 · 335 · 2258 |
+| 표시된 모델·조회 시간 | 약 4.33초 · 약 0.85초 |
+| 별도 Phase 3 SQL 대조 | 월별 12행의 총액·주문수 일치 |
+
+실 API 질문 결과 스냅샷은 2026-10-30 01:11 KST에 기록했다. API 키는 인증에만 사용하고 모델 문맥·화면·증거 파일에 넣지 않았다. 모델에는 질문·스키마·승인 KPI/SQL 예시만 보냈으며 결과 행·원본/리뷰는 전송하지 않았다. 추가 실제 API 요청은 하지 않았다.
+
+로컬 증거는 `output/playwright/phase6-browser-evidence.json`, `phase6-monthly-result.png`, `phase6-no-data.png`, `phase6-ai-usage.png`, `phase6-ai-desktop.png`, `phase6-mobile.png` 및 DOM 스냅샷이다. 공개 후보에 원본·DB·키·로컬 브라우저 산출물을 올리지 않는다. 실제 계정 인증/한도 오류를 일부러 유발하지 않았고, 해당 화면은 모의 AppTest·기존 어댑터 테스트로 검증했다.
+
+미검증: 실제 모델의 다른 지표/많은 한국어 표현, 여러 브라우저·보조기술, 공유 서버·로그인·공개 배포·금전 비용/잔여 한도. 로컬 MVP 화면까지만 완료했으며 Phase 7은 착수하지 않았다.
+
+게시 전 변경 18개 파일의 UTF-8·마지막 줄·공백·상대 링크·펜스·충돌·비밀값 패턴 검사와 공개 후보 58개 파일의 실제 키 문자열 비포함 검사를 통과했다. TOML·workflow YAML 문법과 root app.py의 CI 컴파일 포함, 기존 27개 버전 유지, `.env`·Streamlit secrets·로컬 브라우저 산출물 Git 제외를 확인했다. `git diff --check`도 통과했다. 비밀값 검사에서 값 자체는 출력하지 않았다.
+
 ## 2026-10-30 — Phase 5 분석 에이전트·SQL 정책·실행 제한
 
 사용자가 설명 후 즉시 Phase 5 진행을 요청해 Phase 4 검토와 착수 승인을 반영했다. 새 패키지는 추가하지 않았으며 기존 DuckDB 2.0.0의 네이티브 JSON AST를 사용했다. 아래 이전 날짜 기록은 당시의 상태다.
