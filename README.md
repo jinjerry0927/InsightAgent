@@ -8,9 +8,10 @@ NVIDIA AI 기반 이커머스 데이터 분석 에이전트입니다. 실제 Oli
 - 2026-10-24: Phase 1 정적 역분석 재검토 완료. Vanna 실행 시연은 미검증입니다.
 - Phase 2: 원본 CSV 9개 적재·데이터 조사와 KPI 기준 승인 반영 완료.
 - Phase 3: 기준 SQL 4개·실제 CSV 독립 대조 완료, 사용자 검토 및 다음 단계 승인 반영했습니다.
-- 2026-10-29 Phase 4: NVIDIA API 어댑터·83개 오프라인 테스트·실제 연결 1회 검증 완료, 최종 검토 대기입니다. 연결 약 1.04초·총 25토큰이며 추가 설정 작업은 없습니다.
-- 실행 가능한 코드는 환경 확인·DB 구축·프로파일링·기준 KPI 분석·API 연결 점검입니다. 자연어 분석 앱은 이후 단계입니다.
-- 초기 환경은 `main`, 이후 Phase는 `codex/` 브랜치·검토 PR에 게시합니다. Phase 4 PR은 Phase 3 브랜치를 기준으로 검토하며 자동 병합하지 않습니다.
+- Phase 4: NVIDIA API 연동·최소 실제 연결 검증 및 사용자 다음 단계 승인 반영 완료.
+- 2026-10-30 Phase 5: 분석 에이전트·SQL 검증·별도 조회 프로세스·187개 테스트·실제 DB 4개 지표·한국어 실제 질문 1개 검증 완료, 최종 검토 대기입니다.
+- 자연어 분석은 CLI에서 실행합니다. 초기 지원 범위는 승인된 4개 KPI와 기간 변경이며 Streamlit 화면은 Phase 6입니다.
+- 초기 환경은 `main`, 이후 Phase는 `codex/` 브랜치·검토 PR에 게시합니다. Phase 5 PR은 Phase 4 브랜치를 기준으로 검토하며 자동 병합하지 않습니다.
 
 ## MVP
 
@@ -43,7 +44,7 @@ flowchart TD
     Q --> STOP
 ```
 
-위 구조는 설계안이며 아직 구현되지 않았습니다. KPI는 실제 데이터 조사 후 사용자 승인으로 확정합니다.
+데이터·KPI·API·에이전트와 제한된 조회 경로는 구현했습니다. Streamlit·Plotly 화면은 Phase 6에서 연결합니다. KPI 기준은 [METRICS](docs/METRICS.md)에 승인 상태와 함께 기록했습니다.
 
 ## 문서 안내
 
@@ -56,6 +57,7 @@ flowchart TD
 - [승인된 KPI 정의](docs/METRICS.md)
 - [기준 SQL 실제 결과·독립 검증](docs/BASELINE_RESULTS.md)
 - [NVIDIA API 설정·호출 예산·오류 처리](docs/NVIDIA_API.md)
+- [Phase 5 에이전트·안전성·실행·검증 범위](docs/PHASE5_AGENT.md)
 - [학습 기록](docs/LEARNING_LOG.md)
 - [검증 근거](docs/TEST_EVIDENCE.md)
 
@@ -89,7 +91,7 @@ uv pip compile requirements.in --python .venv/Scripts/python.exe --default-index
 
 Python 3.11과 Windows x64에서 확인한 구성입니다. 다른 운영체제·Python 버전의 호환성은 아직 검증하지 않았습니다. uv 사용법은 [가상환경](https://docs.astral.sh/uv/pip/environments/)과 [의존성 고정·동기화 공식 문서](https://docs.astral.sh/uv/pip/compile/)를 참고합니다.
 
-데이터 적재 11개·지표 23개·API 모의 테스트 49개, 총 83개를 제공합니다. API 키와 Olist 원본 없이 작은 합성 입력으로 실행합니다.
+데이터 적재 11개·지표 23개·API 모의 테스트 49개·에이전트/SQL/실행 제한 104개, 총 187개를 제공합니다. API 키와 Olist 원본 없이 작은 합성 입력으로 실행합니다.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
@@ -128,6 +130,17 @@ Python 3.11과 Windows x64에서 확인한 구성입니다. 다른 운영체제�
 - 관측된 0원은 유지하고, 기간·상태에 맞는 데이터 부재와 금액 결측은 0으로 바꾸지 않습니다.
 - 기준 SQL 실행기는 검토된 저장소 파일만 사용합니다. AI 생성 SQL의 안전성 검증은 Phase 5의 별도 작업입니다.
 
+## 자연어 분석 CLI
+
+추가 설치·키 설정 없이 현재 환경에서 실행할 수 있습니다. 아래 시연은 고정 SQL을 사용하며 API를 호출하지 않습니다.
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -m scripts.ask --demo "월별 매출과 주문수" --start 2017-01-01 --end 2017-02-01
+.\.venv\Scripts\python.exe -X utf8 -m scripts.verify_agent
+```
+
+실제 자연어 모델은 명시적인 `--live` 옵션으로 사용합니다. 새 호출에는 사용량이 발생하므로 자세한 명령·한도·지원 범위를 [Phase 5 안내](docs/PHASE5_AGENT.md)에서 확인합니다. 실제 최소 검증에서는 2017년 1월 상품금액 111,798.36·주문 750건이 Phase 3 값과 일치했습니다. UI·새 지표·새 필터는 후속 검토 대상입니다.
+
 ## GitHub 활용
 
 | 기능 | 사용 방법 |
@@ -157,7 +170,7 @@ Get-ChildItem .\data\raw -Filter *.csv | Select-Object Name
 - 데이터 출처: [Olist Brazilian E-Commerce Public Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce).
 - 원본과 생성 DB는 로컬에서 관리합니다. 공식 페이지의 Version 2·CC BY-NC-SA 4.0 표시와 로컬 지문은 [출처 문서](docs/DATA_SOURCE.md)에 기록했습니다.
 - `.env`, 가상환경, 원본 데이터와 생성 DB는 Git에서 제외합니다.
-- SQL 생성과 실행을 분리하고, 조회 전용·외부 접근 차단·리소스 제한을 검증한 경로로 실행할 예정입니다.
+- SQL 생성·검증·실행을 분리하고, 승인 KPI 구조·읽기 전용·외부 접근 차단·시간/메모리/결과 제한을 적용한 별도 프로세스에서 조회합니다. 세부 보장과 한계는 Phase 5 안내를 참조합니다.
 - 실 API 호출, Git push, 배포는 승인된 범위에서만 진행합니다.
 
 프로젝트 저장소: [jinjerry0927/InsightAgent](https://github.com/jinjerry0927/InsightAgent).

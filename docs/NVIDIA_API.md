@@ -1,16 +1,16 @@
 # NVIDIA API 연동
 
-기준일: 2026-10-29. Phase 4 코드·오프라인 검증·실제 연결 시험 완료, 사용자 최종 검토 대기다.
+Phase 4 검증일: 2026-10-29. 이후 사용자 요청으로 검토 승인을 반영했다. 2026-10-30 Phase 5 에이전트에서 이 어댑터를 재사용했으며 상세 결과는 [PHASE5_AGENT](PHASE5_AGENT.md)에 있다.
 
 ## 구현 범위와 공식 근거
 
-`scripts/llm_client.py`는 텍스트 질문과 제한된 시스템 문맥을 받아 NVIDIA의 텍스트 답변·사용량·소요 시간을 반환한다. DB·CSV를 읽거나 생성 SQL을 실행하는 기능은 없다. 에이전트·SQL 안전성 검사는 Phase 5에서 구현한다.
+`scripts/llm_client.py`는 텍스트 질문과 제한된 시스템 문맥을 받아 NVIDIA의 텍스트 답변·사용량·소요 시간을 반환한다. DB·CSV를 읽거나 생성 SQL을 실행하는 기능은 없다. 에이전트·SQL 안전성 검사는 별도 [Phase 5 구성 요소](PHASE5_AGENT.md)로 구현했다.
 
 - [NVIDIA Build 모델 예제](https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b): OpenAI 호환 Python 클라이언트, 모델 식별자, API 기본 주소와 chat completions 호출을 확인했다.
 - [NVIDIA API Reference](https://docs.api.nvidia.com/nim/reference/nvidia-nemotron-3-5-lightning-30b-a3b): 해당 모델의 API 문서 위치를 확인했다.
 - [NVIDIA 배포 모델 카드](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16/blob/28ae02f54748b2784572c929585adff2d0d62130/README.md): `enable_thinking=False`로 직접 답변하는 예제를 확인했다. 이번 어댑터는 이 설정과 비스트리밍 호출을 사용한다. 2026-10-29 실제 호스팅 API가 해당 요청을 수용하고 기대 답변을 반환했다.
 
-모델 카드의 지원 언어 목록에는 한국어가 명시되지 않았다. 실제 한국어 질문·SQL 생성 정확도는 Phase 5 평가 대상이며, 영어 연결 문장 성공으로 대신하지 않는다.
+조사한 모델 카드의 지원 언어 목록에는 한국어가 명시되지 않았다. Phase 5에서 실제 한국어 질문 1개를 기준 SQL과 대조했으며 다양한 표현·다른 지표 성능은 추가 평가 대상이다. 영어 연결 문장 성공으로 대신하지 않는다.
 
 의존성은 공식 예제의 `openai`와 로컬 설정을 읽는 `python-dotenv`를 추가했다. 각각 3.37.0·1.2.4로 해결되었으며, 기존 데이터 패키지 버전은 유지했다. 하위 의존성 포함 총 27개를 `requirements.txt`에 버전·해시로 고정했다. OpenAI 서비스 대신 명시한 NVIDIA 주소로 요청한다.
 
@@ -60,7 +60,7 @@
 | `output_limit` | 토큰 상한으로 잘린 답변. 불완전한 SQL로 이어지지 않도록 폐기 |
 | `empty_response`, `invalid_response`, `unsupported_response` | 빈 답변·잘못된 형식·도구 호출·필터 등. 성공으로 처리하지 않음 |
 
-질문과 시스템 문맥 합계는 24,000자 이내이며 초과 시 임의 자르기 없이 거부한다. 이 길이 제한만으로 원본 데이터 전송을 허용하지 않는다. Phase 5 호출자가 승인된 문맥만 구성해야 한다. 반환 텍스트를 검증 전 SQL로 실행해서는 안 된다. 질문당 총 호출 제한은 Phase 5 상태 관리에서 별도로 적용한다.
+질문과 시스템 문맥 합계는 24,000자 이내이며 초과 시 임의 자르기 없이 거부한다. 이 길이 제한만으로 원본 데이터 전송을 허용하지 않는다. Phase 5 호출자는 승인된 스키마·KPI·예시와 질문만 문맥으로 구성한다. 반환 텍스트를 검증 전 SQL로 실행해서는 안 된다. 질문당 총 호출 제한은 Phase 5 상태 관리에서 별도로 적용한다.
 
 ## 검증 상태
 
