@@ -1,5 +1,7 @@
-# Phase 2: data loading, analysis, and offline verification.
+# Data analysis, NVIDIA's OpenAI-compatible API, local configuration, and tests.
 # Compile this file to requirements.txt before syncing the virtual environment.
 duckdb
 pandas
+openai
+python-dotenv
 pytest
