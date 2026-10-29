@@ -1,7 +1,9 @@
-# Data analysis, NVIDIA's OpenAI-compatible API, local configuration, and tests.
+# Data analysis, approved Streamlit/Plotly UI, NVIDIA API, local config, and tests.
 # Compile this file to requirements.txt before syncing the virtual environment.
 duckdb
 pandas
 openai
 python-dotenv
+streamlit
+plotly
 pytest
